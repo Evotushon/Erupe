@@ -34,8 +34,8 @@ type Session struct {
 	clientContext *clientctx.ClientContext
 	lastPacket    time.Time
 
+	objectIndex      uint16
 	userEnteredStage bool // If the user has entered a stage before
-	stageID          string
 	stage            *Stage
 	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
 	stagePass        string // Temporary storage
@@ -61,8 +61,9 @@ type Session struct {
 	mailList []int
 
 	// For Debuging
-	Name   string
-	closed bool
+	Name     string
+	closed   bool
+	ackStart map[uint32]time.Time
 }
 
 // NewSession creates a new Session type.
@@ -77,7 +78,9 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		lastPacket:     time.Now(),
 		sessionStart:   TimeAdjusted().Unix(),
 		stageMoveStack: stringstack.New(),
+		ackStart:       make(map[uint32]time.Time),
 	}
+	s.SetObjectID()
 	return s
 }
 
@@ -190,6 +193,10 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	s.lastPacket = time.Now()
 	bf := byteframe.NewByteFrameFromBytes(pktGroup)
 	opcodeUint16 := bf.ReadUint16()
+	if len(bf.Data()) >= 6 {
+		s.ackStart[bf.ReadUint32()] = time.Now()
+		bf.Seek(2, io.SeekStart)
+	}
 	opcode := network.PacketID(opcodeUint16)
 
 	// This shouldn't be needed, but it's better to recover and let the connection die than to panic the server.
@@ -252,7 +259,7 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 
 	if sender == "Server" && !s.server.erupeConfig.DevModeOptions.LogOutboundMessages {
 		return
-	} else if !s.server.erupeConfig.DevModeOptions.LogInboundMessages {
+	} else if sender != "Server" && !s.server.erupeConfig.DevModeOptions.LogInboundMessages {
 		return
 	}
 
@@ -260,11 +267,49 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 	if ignored(opcodePID) {
 		return
 	}
-	fmt.Printf("[%s] -> [%s]\n", sender, recipient)
-	fmt.Printf("Opcode: %s\n", opcodePID)
-	if len(data) <= s.server.erupeConfig.DevModeOptions.MaxHexdumpLength {
-		fmt.Printf("Data [%d bytes]:\n%s\n", len(data), hex.Dump(data))
-	} else {
-		fmt.Printf("Data [%d bytes]:\n(Too long!)\n\n", len(data))
+	var ackHandle uint32
+	if len(data) >= 6 {
+		ackHandle = binary.BigEndian.Uint32(data[2:6])
 	}
+	if t, ok := s.ackStart[ackHandle]; ok {
+		fmt.Printf("[%s] -> [%s] (%fs)\n", sender, recipient, float64(time.Now().UnixNano()-t.UnixNano())/1000000000)
+	} else {
+		fmt.Printf("[%s] -> [%s]\n", sender, recipient)
+	}
+	fmt.Printf("Opcode: %s\n", opcodePID)
+	if s.server.erupeConfig.DevModeOptions.LogMessageData {
+		if len(data) <= s.server.erupeConfig.DevModeOptions.MaxHexdumpLength {
+			fmt.Printf("Data [%d bytes]:\n%s\n", len(data), hex.Dump(data))
+		} else {
+			fmt.Printf("Data [%d bytes]: (Too long!)\n\n", len(data))
+		}
+	} else {
+		fmt.Printf("\n")
+	}
+}
+
+func (s *Session) SetObjectID() {
+	for i := uint16(1); i < 127; i++ {
+		exists := false
+		for _, j := range s.server.objectIDs {
+			if i == j {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			s.server.objectIDs[s] = i
+			return
+		}
+	}
+	s.server.objectIDs[s] = 0
+}
+
+func (s *Session) NextObjectID() uint32 {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(s.server.objectIDs[s])
+	s.objectIndex++
+	bf.WriteUint16(s.objectIndex)
+	bf.Seek(0, 0)
+	return bf.ReadUint32()
 }

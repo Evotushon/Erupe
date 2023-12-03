@@ -12,6 +12,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandKqfGet"] = "現在のキークエストフラグ：%x"
 		strings["commandKqfSetError"] = "キークエコマンドエラー　例：%s set xxxxxxxxxxxxxxxx"
 		strings["commandKqfSetSuccess"] = "キークエストのフラグが更新されました。ワールド／ランドを移動してください"
+		strings["commandKqfVersion"] = "This command is disabled prior to MHFG10"
 		strings["commandRightsError"] = "コース更新コマンドエラー　例：%s x"
 		strings["commandRightsSuccess"] = "コース情報を更新しました：%d"
 		strings["commandCourseError"] = "コース確認コマンドエラー　例：%s <name>"
@@ -22,6 +23,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandTeleportSuccess"] = "%d %dにテレポート"
 		strings["commandPSNError"] = "PSN連携コマンドエラー　例：%s <psn id>"
 		strings["commandPSNSuccess"] = "PSN「%s」が連携されています"
+		strings["commandPSNExists"] = "PSNは既存のユーザに接続されています"
 
 		strings["commandRaviNoCommand"] = "ラヴィコマンドが指定されていません"
 		strings["commandRaviStartSuccess"] = "大討伐を開始します"
@@ -33,6 +35,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandRaviRequest"] = "鎮静支援を要請します"
 		strings["commandRaviError"] = "ラヴィコマンドが認識されません"
 		strings["commandRaviNoPlayers"] = "誰も大討伐に参加していません"
+		strings["commandRaviVersion"] = "This command is disabled outside of MHFZZ"
 
 		strings["ravienteBerserk"] = "<大討伐：猛狂期>が開催されました！"
 		strings["ravienteExtreme"] = "<大討伐：猛狂期【極】>が開催されました！"
@@ -62,6 +65,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandKqfGet"] = "KQF: %x"
 		strings["commandKqfSetError"] = "Error in command. Format: %s set xxxxxxxxxxxxxxxx"
 		strings["commandKqfSetSuccess"] = "KQF set, please switch Land/World"
+		strings["commandKqfVersion"] = "This command is disabled prior to MHFG10"
 		strings["commandRightsError"] = "Error in command. Format: %s x"
 		strings["commandRightsSuccess"] = "Set rights integer: %d"
 		strings["commandCourseError"] = "Error in command. Format: %s <name>"
@@ -72,6 +76,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandTeleportSuccess"] = "Teleporting to %d %d"
 		strings["commandPSNError"] = "Error in command. Format: %s <psn id>"
 		strings["commandPSNSuccess"] = "Connected PSN ID: %s"
+		strings["commandPSNExists"] = "PSN ID is connected to another account!"
 
 		strings["commandRaviNoCommand"] = "No Raviente command specified!"
 		strings["commandRaviStartSuccess"] = "The Great Slaying will begin in a moment"
@@ -83,6 +88,7 @@ func getLangStrings(s *Server) map[string]string {
 		strings["commandRaviRequest"] = "Requesting sedation support!"
 		strings["commandRaviError"] = "Raviente command not recognised!"
 		strings["commandRaviNoPlayers"] = "No one has joined the Great Slaying!"
+		strings["commandRaviVersion"] = "This command is disabled outside of MHFZZ"
 
 		strings["ravienteBerserk"] = "<Great Slaying: Berserk> is being held!"
 		strings["ravienteExtreme"] = "<Great Slaying: Extreme> is being held!"
