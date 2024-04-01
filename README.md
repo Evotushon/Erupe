@@ -1,6 +1,6 @@
 # Erupe
 
-## Client Compatiblity
+## Client Compatibility
 ### Platforms
 - PC
 - PlayStation 3
@@ -31,6 +31,20 @@ If you want to modify or compile Erupe yourself, please read on.
 2. Run each script under [patch-schema](./patch-schema) as they introduce newer schema.
 3. Edit [config.json](./config.json) such that the database password matches your PostgreSQL setup.
 4. Run `go build` or `go run .` to compile Erupe.
+
+## Docker
+
+Please see [docker/README.md](./docker/README.md). This is intended for quick installs and development, not for production. 
+
+## Schemas 
+
+We source control the following schemas: 
+- Initialization Schema: This initializes the application database to a specific version (9.1.0).
+- Update Schemas: These are update files that should be ran on top of the initialization schema.
+- Patch Schemas: These are for development and should be run after running all initialization and update schema. These get condensed into `Update Schemas` and deleted when updated to a new release.
+- Bundled Schemas: These are demo reference files to give servers standard set-ups. 
+
+Note: Patch schemas are subject to change! You should only be using them if you are following along with development. 
 
 ## Resources
 

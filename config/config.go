@@ -75,45 +75,29 @@ type Config struct {
 	LoginNotices           []string // MHFML string of the login notices displayed
 	PatchServerManifest    string   // Manifest patch server override
 	PatchServerFile        string   // File patch server override
-	ScreenshotAPIURL       string   // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool     // Attempts to save corrupted data will flag the save for deletion
 	ClientMode             string
 	RealClientMode         Mode
 	QuestCacheExpiry       int    // Number of seconds to keep quest data cached
-	ProxyPort              uint16 // Forces the game to connect to a channel server proxy
 	CommandPrefix          string // The prefix for commands
-	DevMode                bool
+	AutoCreateAccount      bool   // Automatically create accounts if they don't exist
+	DefaultCourses         []uint16
+	EarthStatus            int32
+	EarthID                int32
+	EarthMonsters          []int32
+	SaveDumps              SaveDumpOptions
+	Screenshots            ScreenshotsOptions
 
-	DevModeOptions  DevModeOptions
+	DebugOptions    DebugOptions
 	GameplayOptions GameplayOptions
 	Discord         Discord
 	Commands        []Command
 	Courses         []Course
 	Database        Database
 	Sign            Sign
-	SignV2          SignV2
+	API             API
 	Channel         Channel
 	Entrance        Entrance
-}
-
-// DevModeOptions holds various debug/temporary options for use while developing Erupe.
-type DevModeOptions struct {
-	AutoCreateAccount    bool // Automatically create accounts if they don't exist
-	CleanDB              bool // Automatically wipes the DB on server reset.
-	MaxLauncherHR        bool // Sets the HR returned in the launcher to HR7 so that you can join non-beginner worlds.
-	LogInboundMessages   bool // Log all messages sent to the server
-	LogOutboundMessages  bool // Log all messages sent to the clients
-	LogMessageData       bool // Log all bytes transferred as a hexdump
-	MaxHexdumpLength     int  // Maximum number of bytes printed when logs are enabled
-	DivaEvent            int  // Diva Defense event status
-	FestaEvent           int  // Hunter's Festa event status
-	TournamentEvent      int  // VS Tournament event status
-	DisableTokenCheck    bool // Disables checking login token exists in the DB (security risk!)
-	QuestDebugTools      bool // Enable various quest debug logs
-	EarthStatusOverride  int32
-	EarthIDOverride      int32
-	EarthMonsterOverride []int32
-	SaveDumps            SaveDumpOptions
 }
 
 type SaveDumpOptions struct {
@@ -122,9 +106,43 @@ type SaveDumpOptions struct {
 	OutputDir  string
 }
 
+type ScreenshotsOptions struct {
+	Enabled       bool
+	Host          string // Destination for screenshots uploaded to BBS
+	Port          uint32 // Port for screenshots API
+	OutputDir     string
+	UploadQuality int //Determines the upload quality to the server
+}
+
+// DebugOptions holds various debug/temporary options for use while developing Erupe.
+type DebugOptions struct {
+	CleanDB             bool   // Automatically wipes the DB on server reset.
+	MaxLauncherHR       bool   // Sets the HR returned in the launcher to HR7 so that you can join non-beginner worlds.
+	LogInboundMessages  bool   // Log all messages sent to the server
+	LogOutboundMessages bool   // Log all messages sent to the clients
+	LogMessageData      bool   // Log all bytes transferred as a hexdump
+	MaxHexdumpLength    int    // Maximum number of bytes printed when logs are enabled
+	DivaOverride        int    // Diva Defense event status
+	FestaOverride       int    // Hunter's Festa event status
+	TournamentOverride  int    // VS Tournament event status
+	DisableTokenCheck   bool   // Disables checking login token exists in the DB (security risk!)
+	QuestTools          bool   // Enable various quest debug logs
+	AutoQuestBackport   bool   // Automatically backport quest files
+	ProxyPort           uint16 // Forces the game to connect to a channel server proxy
+	CapLink             CapLinkOptions
+}
+
+type CapLinkOptions struct {
+	Values []uint16
+	Key    string
+	Host   string
+	Port   int
+}
+
 // GameplayOptions has various gameplay modifiers
 type GameplayOptions struct {
-	FeaturedWeapons                int       // Number of Active Feature weapons to generate daily
+	MinFeatureWeapons              int       // Minimum number of Active Feature weapons to generate daily
+	MaxFeatureWeapons              int       // Maximum number of Active Feature weapons to generate daily
 	MaximumNP                      int       // Maximum number of NP held by a player
 	MaximumRP                      uint16    // Maximum number of RP held by a player
 	MaximumFP                      uint32    // Maximum number of FP held by a player
@@ -137,8 +155,6 @@ type GameplayOptions struct {
 	ClanMemberLimits               [][]uint8 // Array of maximum Clan Members -> [Rank, Members]
 	BonusQuestAllowance            uint32    // Number of Bonus Point Quests to allow daily
 	DailyQuestAllowance            uint32    // Number of Daily Quests to allow daily
-	MezfesSoloTickets              uint32    // Number of solo tickets given weekly
-	MezfesGroupTickets             uint32    // Number of group tickets given weekly
 	LowLatencyRaviente             bool      // Toggles low latency mode for Raviente, can be network intensive
 	RegularRavienteMaxPlayers      uint8
 	ViolentRavienteMaxPlayers      uint8
@@ -147,12 +163,29 @@ type GameplayOptions struct {
 	SmallBerserkRavienteMaxPlayers uint8
 	GUrgentRate                    float32 // Adjusts the rate of G Urgent quests spawning
 	GCPMultiplier                  float32 // Adjusts the multiplier of GCP rewarded for quest completion
+	HRPMultiplier                  float32 // Adjusts the multiplier of Hunter Rank Points rewarded for quest completion
+	HRPMultiplierNC                float32 // Adjusts the multiplier of Hunter Rank Points rewarded for quest completion in a NetCafe
+	SRPMultiplier                  float32 // Adjusts the multiplier of Skill Rank Points rewarded for quest completion
+	SRPMultiplierNC                float32 // Adjusts the multiplier of Skill Rank Points rewarded for quest completion in a NetCafe
 	GRPMultiplier                  float32 // Adjusts the multiplier of G Rank Points rewarded for quest completion
+	GRPMultiplierNC                float32 // Adjusts the multiplier of G Rank Points rewarded for quest completion in a NetCafe
 	GSRPMultiplier                 float32 // Adjusts the multiplier of G Skill Rank Points rewarded for quest completion
+	GSRPMultiplierNC               float32 // Adjusts the multiplier of G Skill Rank Points rewarded for quest completion in a NetCafe
+	ZennyMultiplier                float32 // Adjusts the multiplier of Zenny rewarded for quest completion
+	ZennyMultiplierNC              float32 // Adjusts the multiplier of Zenny rewarded for quest completion in a NetCafe
 	GZennyMultiplier               float32 // Adjusts the multiplier of G Zenny rewarded for quest completion
+	GZennyMultiplierNC             float32 // Adjusts the multiplier of G Zenny rewarded for quest completion in a NetCafe
 	MaterialMultiplier             float32 // Adjusts the multiplier of Monster Materials rewarded for quest completion
+	MaterialMultiplierNC           float32 // Adjusts the multiplier of Monster Materials rewarded for quest completion in a NetCafe
+	GMaterialMultiplier            float32 // Adjusts the multiplier of G Rank Monster Materials rewarded for quest completion
+	GMaterialMultiplierNC          float32 // Adjusts the multiplier of G Rank Monster Materials rewarded for quest completion in a NetCafe
 	ExtraCarves                    uint16  // Grant n extra chances to carve ALL carcasses
+	ExtraCarvesNC                  uint16  // Grant n extra chances to carve ALL carcasses in a NetCafe
+	GExtraCarves                   uint16  // Grant n extra chances to carve ALL G Rank carcasses
+	GExtraCarvesNC                 uint16  // Grant n extra chances to carve ALL G Rank carcasses in a NetCafe
 	DisableHunterNavi              bool    // Disables the Hunter Navi
+	MezFesSoloTickets              uint32  // Number of solo tickets given weekly
+	MezFesGroupTickets             uint32  // Number of group tickets given weekly
 	MezFesDuration                 int     // Seconds that MezFes will last for weekly (from 12AM Mon backwards)
 	MezFesSwitchMinigame           bool    // Swaps out Volpakkun Together for Tokotoko Partnya
 	EnableKaijiEvent               bool    // Enables the Kaiji event in the Rasta Bar
@@ -164,9 +197,15 @@ type GameplayOptions struct {
 
 // Discord holds the discord integration config.
 type Discord struct {
-	Enabled           bool
-	BotToken          string
-	RealtimeChannelID string
+	Enabled      bool
+	BotToken     string
+	RelayChannel DiscordRelay
+}
+
+type DiscordRelay struct {
+	Enabled          bool
+	MaxMessageLength int
+	RelayChannelID   string
 }
 
 // Command is a channelserver chat command
@@ -198,29 +237,29 @@ type Sign struct {
 	Port    int
 }
 
-// SignV2 holds the new sign server config
-type SignV2 struct {
+// API holds server config
+type API struct {
 	Enabled     bool
 	Port        int
 	PatchServer string
-	Banners     []SignV2Banner
-	Messages    []SignV2Message
-	Links       []SignV2Link
+	Banners     []APISignBanner
+	Messages    []APISignMessage
+	Links       []APISignLink
 }
 
-type SignV2Banner struct {
+type APISignBanner struct {
 	Src  string `json:"src"`  // Displayed image URL
 	Link string `json:"link"` // Link accessed on click
 }
 
-type SignV2Message struct {
+type APISignMessage struct {
 	Message string `json:"message"` // Displayed message
 	Date    int64  `json:"date"`    // Displayed date
 	Kind    int    `json:"kind"`    // 0 for 'Default', 1 for 'New'
 	Link    string `json:"link"`    // Link accessed on click
 }
 
-type SignV2Link struct {
+type APISignLink struct {
 	Name string `json:"name"` // Displayed name
 	Icon string `json:"icon"` // Displayed icon. It will be cast as a monochrome color as long as it is transparent.
 	Link string `json:"link"` // Link accessed on click
@@ -320,6 +359,10 @@ func LoadConfig() (*Config, error) {
 	if c.RealClientMode == 0 {
 		c.ClientMode = versionStrings[len(versionStrings)-1]
 		c.RealClientMode = ZZ
+	}
+
+	if c.GameplayOptions.MinFeatureWeapons > c.GameplayOptions.MaxFeatureWeapons {
+		c.GameplayOptions.MinFeatureWeapons = c.GameplayOptions.MaxFeatureWeapons
 	}
 
 	return c, nil

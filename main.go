@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"erupe-ce/server/api"
 	"erupe-ce/server/channelserver"
 	"erupe-ce/server/discordbot"
 	"erupe-ce/server/entranceserver"
 	"erupe-ce/server/signserver"
-	"erupe-ce/server/signv2server"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -22,13 +22,10 @@ import (
 )
 
 // Temporary DB auto clean on startup for quick development & testing.
-func cleanDB(db *sqlx.DB, config *_config.Config) {
+func cleanDB(db *sqlx.DB) {
 	_ = db.MustExec("DELETE FROM guild_characters")
 	_ = db.MustExec("DELETE FROM guilds")
 	_ = db.MustExec("DELETE FROM characters")
-	if config.ProxyPort == 0 {
-		_ = db.MustExec("DELETE FROM sign_sessions")
-	}
 	_ = db.MustExec("DELETE FROM users")
 }
 
@@ -48,11 +45,7 @@ func main() {
 
 	var zapLogger *zap.Logger
 	config := _config.ErupeConfig
-	if config.DevMode {
-		zapLogger, _ = zap.NewDevelopment()
-	} else {
-		zapLogger, _ = zap.NewProduction()
-	}
+	zapLogger, _ = zap.NewDevelopment()
 
 	defer zapLogger.Sync()
 	logger := zapLogger.Named("main")
@@ -98,6 +91,12 @@ func main() {
 		}
 
 		discordBot = bot
+
+		_, err = discordBot.Session.ApplicationCommandBulkOverwrite(discordBot.Session.State.User.ID, "", discordbot.Commands)
+		if err != nil {
+			preventClose(fmt.Sprintf("Discord: Failed to start, %s", err.Error()))
+		}
+
 		logger.Info("Discord: Started successfully")
 	} else {
 		logger.Info("Discord: Disabled")
@@ -126,16 +125,16 @@ func main() {
 	logger.Info("Database: Started successfully")
 
 	// Clear stale data
-	if config.ProxyPort == 0 {
+	if config.DebugOptions.ProxyPort == 0 {
 		_ = db.MustExec("DELETE FROM sign_sessions")
 	}
 	_ = db.MustExec("DELETE FROM servers")
 	_ = db.MustExec(`UPDATE guild_characters SET treasure_hunt=NULL`)
 
 	// Clean the DB if the option is on.
-	if config.DevMode && config.DevModeOptions.CleanDB {
+	if config.DebugOptions.CleanDB {
 		logger.Info("Database: Started clearing...")
-		cleanDB(db, config)
+		cleanDB(db)
 		logger.Info("Database: Finished clearing")
 	}
 
@@ -182,21 +181,21 @@ func main() {
 	}
 
 	// New Sign server
-	var newSignServer *signv2server.Server
-	if config.SignV2.Enabled {
-		newSignServer = signv2server.NewServer(
-			&signv2server.Config{
+	var ApiServer *api.APIServer
+	if config.API.Enabled {
+		ApiServer = api.NewAPIServer(
+			&api.Config{
 				Logger:      logger.Named("sign"),
 				ErupeConfig: _config.ErupeConfig,
 				DB:          db,
 			})
-		err = newSignServer.Start()
+		err = ApiServer.Start()
 		if err != nil {
-			preventClose(fmt.Sprintf("SignV2: Failed to start, %s", err.Error()))
+			preventClose(fmt.Sprintf("API: Failed to start, %s", err.Error()))
 		}
-		logger.Info("SignV2: Started successfully")
+		logger.Info("API: Started successfully")
 	} else {
-		logger.Info("SignV2: Disabled")
+		logger.Info("API: Disabled")
 	}
 
 	var channels []*channelserver.Server
@@ -274,8 +273,8 @@ func main() {
 		signServer.Shutdown()
 	}
 
-	if config.SignV2.Enabled {
-		newSignServer.Shutdown()
+	if config.API.Enabled {
+		ApiServer.Shutdown()
 	}
 
 	if config.Entrance.Enabled {

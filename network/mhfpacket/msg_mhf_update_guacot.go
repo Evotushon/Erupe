@@ -9,7 +9,7 @@ import (
 
 type Goocoo struct {
 	Index uint32
-	Data1 []uint16
+	Data1 []int16
 	Data2 []uint32
 	Name  []byte
 }
@@ -31,11 +31,11 @@ func (m *MsgMhfUpdateGuacot) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.AckHandle = bf.ReadUint32()
 	m.EntryCount = bf.ReadUint16()
 	bf.ReadUint16() // Zeroed
-	var temp Goocoo
 	for i := 0; i < int(m.EntryCount); i++ {
+		var temp Goocoo
 		temp.Index = bf.ReadUint32()
 		for j := 0; j < 22; j++ {
-			temp.Data1 = append(temp.Data1, bf.ReadUint16())
+			temp.Data1 = append(temp.Data1, bf.ReadInt16())
 		}
 		for j := 0; j < 2; j++ {
 			temp.Data2 = append(temp.Data2, bf.ReadUint32())

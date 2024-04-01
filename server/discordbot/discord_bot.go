@@ -1,18 +1,46 @@
 package discordbot
 
 import (
-	"erupe-ce/config"
+	_config "erupe-ce/config"
+	"regexp"
+
 	"github.com/bwmarrin/discordgo"
 	"go.uber.org/zap"
-	"regexp"
 )
 
+var Commands = []*discordgo.ApplicationCommand{
+	{
+		Name:        "link",
+		Description: "Link your Erupe account to Discord",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "token",
+				Description: "The token provided by the Discord command in-game",
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "password",
+		Description: "Change your Erupe account password",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "password",
+				Description: "Your new password",
+				Required:    true,
+			},
+		},
+	},
+}
+
 type DiscordBot struct {
-	Session         *discordgo.Session
-	config          *_config.Config
-	logger          *zap.Logger
-	MainGuild       *discordgo.Guild
-	RealtimeChannel *discordgo.Channel
+	Session      *discordgo.Session
+	config       *_config.Config
+	logger       *zap.Logger
+	MainGuild    *discordgo.Guild
+	RelayChannel *discordgo.Channel
 }
 
 type Options struct {
@@ -28,18 +56,22 @@ func NewDiscordBot(options Options) (discordBot *DiscordBot, err error) {
 		return nil, err
 	}
 
-	realtimeChannel, err := session.Channel(options.Config.Discord.RealtimeChannelID)
+	var relayChannel *discordgo.Channel
+
+	if options.Config.Discord.RelayChannel.Enabled {
+		relayChannel, err = session.Channel(options.Config.Discord.RelayChannel.RelayChannelID)
+	}
 
 	if err != nil {
-		options.Logger.Fatal("Discord failed to create realtimeChannel", zap.Error(err))
+		options.Logger.Fatal("Discord failed to create relayChannel", zap.Error(err))
 		return nil, err
 	}
 
 	discordBot = &DiscordBot{
-		config:          options.Config,
-		logger:          options.Logger,
-		Session:         session,
-		RealtimeChannel: realtimeChannel,
+		config:       options.Config,
+		logger:       options.Logger,
+		Session:      session,
+		RelayChannel: relayChannel,
 	}
 
 	return
@@ -51,7 +83,7 @@ func (bot *DiscordBot) Start() (err error) {
 	return
 }
 
-// Replace all mentions to real name from the message.
+// NormalizeDiscordMessage replaces all mentions to real name from the message.
 func (bot *DiscordBot) NormalizeDiscordMessage(message string) string {
 	userRegex := regexp.MustCompile(`<@!?(\d{17,19})>`)
 	emojiRegex := regexp.MustCompile(`(?:<a?)?:(\w+):(?:\d{18}>)?`)
@@ -74,11 +106,14 @@ func (bot *DiscordBot) NormalizeDiscordMessage(message string) string {
 }
 
 func (bot *DiscordBot) RealtimeChannelSend(message string) (err error) {
-	_, err = bot.Session.ChannelMessageSend(bot.RealtimeChannel.ID, message)
+	if bot.RelayChannel == nil {
+		return
+	}
+
+	_, err = bot.Session.ChannelMessageSend(bot.RelayChannel.ID, message)
 
 	return
 }
-
 func ReplaceTextAll(text string, regex *regexp.Regexp, handler func(input string) string) string {
 	result := regex.ReplaceAllFunc([]byte(text), func(s []byte) []byte {
 		input := regex.ReplaceAllString(string(s), `$1`)

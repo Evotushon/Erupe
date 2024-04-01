@@ -148,8 +148,23 @@ func removeSessionFromStage(s *Session) {
 	destructEmptySemaphores(s)
 }
 
+func isStageFull(s *Session, StageID string) bool {
+	if stage, exists := s.server.stages[StageID]; exists {
+		if _, exists := stage.reservedClientSlots[s.charID]; exists {
+			return false
+		}
+		return len(stage.reservedClientSlots)+len(stage.clients) >= int(stage.maxPlayers)
+	}
+	return false
+}
+
 func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysEnterStage)
+
+	if isStageFull(s, pkt.StageID) {
+		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+		return
+	}
 
 	// Push our current stage ID to the movement stack before entering another one.
 	if s.stage != nil {
@@ -157,7 +172,6 @@ func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 		s.stage.reservedClientSlots[s.charID] = false
 		s.stage.Unlock()
 		s.stageMoveStack.Push(s.stage.id)
-		s.stageMoveStack.Lock()
 	}
 
 	if s.reservationStage != nil {
@@ -171,10 +185,15 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysBackStage)
 
 	// Transfer back to the saved stage ID before the previous move or enter.
-	s.stageMoveStack.Unlock()
 	backStage, err := s.stageMoveStack.Pop()
 	if backStage == "" || err != nil {
 		backStage = "sl1Ns200p0a0u0"
+	}
+
+	if isStageFull(s, backStage) {
+		s.stageMoveStack.Push(backStage)
+		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+		return
 	}
 
 	if _, exists := s.stage.reservedClientSlots[s.charID]; exists {
@@ -191,9 +210,9 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysMoveStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysMoveStage)
 
-	// Set a new move stack from the given stage ID
-	if !s.stageMoveStack.Locked {
-		s.stageMoveStack.Set(pkt.StageID)
+	if isStageFull(s, pkt.StageID) {
+		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+		return
 	}
 
 	doStageTransfer(s, pkt.AckHandle, pkt.StageID)
